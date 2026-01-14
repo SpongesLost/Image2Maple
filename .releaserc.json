@@ -10,17 +10,6 @@
         "prepareCmd": "echo ${nextRelease.version} > .VERSION"
       }
     ],
-    [
-      "@semantic-release/github",
-      {
-        "assets": [
-          {
-            "path": "ImageToMaple-windows.zip",
-            "label": "ImageToMaple for Windows (v${nextRelease.version})",
-            "name": "ImageToMaple-v${nextRelease.version}-windows.zip"
-          }
-        ]
-      }
-    ]
+    "@semantic-release/github"
   ]
 }

@@ -77,7 +77,7 @@ jobs:
       
       - name: Build executable
         run: |
-          pyinstaller --onefile --windowed --name ImageToMaple ImageToMaple.py
+          pyinstaller --noconfirm --onefile --clean --uac-admin --windowed --name ImageToMaple ImageToMaple.py
           
       - name: Create distribution
         run: |
