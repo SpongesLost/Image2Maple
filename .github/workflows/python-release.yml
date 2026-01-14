@@ -78,12 +78,14 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller --noconfirm --onefile --clean --uac-admin --windowed --name ImageToMaple ImageToMaple.py
-          
+      
       - name: Create distribution
         run: |
-          New-Item -ItemType Directory -Force -Path distribution
-          Copy-Item "dist\ImageToMaple.exe" -Destination "distribution\"
-          Compress-Archive -Path "distribution\*" -DestinationPath "ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip"
+          mkdir -p distribution
+          cp -r build/StandaloneWindows64/* distribution/
+          cd distribution
+          zip -r ../ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip .
+          cd ..
 
       - name: Upload Build to Release
         uses: softprops/action-gh-release@v1
