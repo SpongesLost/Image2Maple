@@ -81,11 +81,9 @@ jobs:
       
       - name: Create distribution
         run: |
-          mkdir -p distribution
-          cp -r build/StandaloneWindows64/* distribution/
-          cd distribution
-          zip -r ../ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip .
-          cd ..
+          New-Item -ItemType Directory -Force -Path distribution
+          Copy-Item "dist\ImageToMaple.exe" -Destination "distribution\"
+          Compress-Archive -Path "distribution\*" -DestinationPath "ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip"
 
       - name: Upload Build to Release
         uses: softprops/action-gh-release@v1
