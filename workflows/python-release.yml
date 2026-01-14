@@ -1,0 +1,94 @@
+name: Python Build & Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag-name: ${{ steps.release.outputs.tag_name }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install semantic-release
+        run: npm install semantic-release @semantic-release/github @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/exec
+
+      - name: Run semantic-release
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run semantic-release
+          $OUTPUT = npx semantic-release --no-ci 2>&1
+          $EXIT_CODE = $LASTEXITCODE
+          
+          Write-Host $OUTPUT
+          
+          # Check if a version file was created (means a release was determined)
+          if (Test-Path ".VERSION") {
+            $VERSION = Get-Content .VERSION -Raw
+            $VERSION = $VERSION.Trim()
+            $TAG_NAME = "v$VERSION"
+            echo "tag_name=$TAG_NAME" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            echo "release_created=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Write-Host "Release created: $TAG_NAME"
+          } else {
+            echo "release_created=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+            Write-Host "No new release version determined"
+          }
+
+  build:
+    runs-on: windows-latest
+    needs: release
+    if: needs.release.outputs.release-created == 'true'
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install tendo pillow keyboard pywin32 requests pyperclip
+      
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --name ImageToMaple ImageToMaple.py
+          
+      - name: Create distribution
+        run: |
+          New-Item -ItemType Directory -Force -Path distribution
+          Copy-Item "dist\ImageToMaple.exe" -Destination "distribution\"
+          Compress-Archive -Path "distribution\*" -DestinationPath "ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip"
+      
+      - name: Upload Build to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip
+          tag_name: ${{ needs.release.outputs.tag-name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

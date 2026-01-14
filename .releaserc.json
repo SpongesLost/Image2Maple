@@ -1,0 +1,26 @@
+{
+  "repositoryUrl": "https://github.com/SpongesLost/Image2Maple.git",
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "echo ${nextRelease.version} > .VERSION"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "ImageToMaple-windows.zip",
+            "label": "ImageToMaple for Windows (v${nextRelease.version})",
+            "name": "ImageToMaple-v${nextRelease.version}-windows.zip"
+          }
+        ]
+      }
+    ]
+  ]
+}
