@@ -90,9 +90,10 @@ jobs:
           Copy-Item "dist\ImageToMaple.exe" -Destination "distribution\"
           Compress-Archive -Path "distribution\*" -DestinationPath "ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip"
 
-      - name: Upload Build to Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload Build to Existing Release
+        uses: softprops/action-gh-release@v1
         with:
           files: ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip
           tag_name: ${{ needs.release.outputs.tag-name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
