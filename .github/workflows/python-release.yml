@@ -56,6 +56,10 @@ jobs:
 
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     needs: release
     if: needs.release.outputs.release-created == 'true'
     
