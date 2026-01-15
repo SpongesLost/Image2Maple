@@ -64,6 +64,11 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Debug release info
+        run: |
+          Write-Host "Release created: ${{ needs.release.outputs.release-created }}"
+          Write-Host "Tag name: ${{ needs.release.outputs.tag-name }}"
+      
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -86,9 +91,8 @@ jobs:
           Compress-Archive -Path "distribution\*" -DestinationPath "ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip"
 
       - name: Upload Build to Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: ImageToMaple-${{ needs.release.outputs.tag-name }}-Windows.zip
           tag_name: ${{ needs.release.outputs.tag-name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
