@@ -30,8 +30,9 @@ DEFAULT_MAPLE_PATH = r"C:\Program Files\Maple 2025\bin.X86_64_WINDOWS\cmaple.exe
 LOG_FILE = SCRIPT_DIR / 'latex_to_maple.log'
 
 SIMPLETEX_API_URL = 'https://server.simpletex.cn/api/latex_ocr'
-SIMPLETEX_APP_ID = "AmHZzJ4w9lQaItD4kidjwKrn"
-SIMPLETEX_APP_SECRET = "jvlfzMGcam1kBiaLpnABj8oLSdAXsRXF"
+SIMPLETEX_APP_ID = os.getenv("SIMPLETEX_APP_ID")
+SIMPLETEX_APP_SECRET = os.getenv("SIMPLETEX_APP_SECRET")
+
 # Setup logging
 tlogging = logging.basicConfig(
     filename=LOG_FILE,
@@ -39,7 +40,6 @@ tlogging = logging.basicConfig(
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
         
-
 def has_internet(url="https://www.google.com", timeout=3) -> bool:
     try:
         requests.head(url, timeout=timeout)
