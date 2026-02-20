@@ -1,5 +1,4 @@
 import threading
-import tkinter
 from tendo import singleton
 me = singleton.SingleInstance()
 
@@ -15,11 +14,10 @@ import pyperclip
 import keyboard
 from PIL import ImageGrab, Image
 from win32com.client import Dispatch
-from tkinter import Tk, simpledialog, messagebox, Text, Label
+from tkinter import Tk, simpledialog, messagebox, Label
 from win32gui import GetWindowText, GetForegroundWindow
 
 import Config
-import OCR
 import Maple
 
 # Constants
@@ -28,10 +26,6 @@ SCRIPT_DIR = Path(sys.executable).parent if getattr(sys, 'frozen', False) else P
 CONFIG_PATH = SCRIPT_DIR / "config.json"
 DEFAULT_MAPLE_PATH = r"C:\Program Files\Maple 2025\bin.X86_64_WINDOWS\cmaple.exe"
 LOG_FILE = SCRIPT_DIR / 'latex_to_maple.log'
-
-SIMPLETEX_API_URL = 'https://server.simpletex.cn/api/latex_ocr'
-SIMPLETEX_APP_ID = os.getenv("SIMPLETEX_APP_ID")
-SIMPLETEX_APP_SECRET = os.getenv("SIMPLETEX_APP_SECRET")
 
 # Setup logging
 tlogging = logging.basicConfig(
@@ -75,14 +69,16 @@ def get_maple_executable() -> str:
     logging.info(f"Using Maple executable at {path}")
     return path
 
-def log_at_cursor(text: str, truncate: bool) -> None:
+def paste_at_cursor(text: str, truncate: bool) -> bool:
     try:
         pyperclip.copy(text)
         time.sleep(0.06)
         keyboard.press_and_release('ctrl+v')
         logging.debug("Logged at cursor: %s", text)
+        return False
     except Exception:
         logging.exception("Failed in log_at_cursor")
+        return True
 
 def create_startup():
     logging.debug("Attempting to create startup shortcut")
@@ -133,41 +129,44 @@ def initiate_loading_popup():
 def process_clipboard(maple_exe: str, raw: bool = False):
     global hidepopupwindow
     window_text = GetWindowText(GetForegroundWindow())
-    if "Maple" in window_text or "Word" in window_text:
-
-        while any(keyboard._pressed_events):  # type: ignore
-            time.sleep(0.01)
-            
-        if not has_internet():
-            logging.error("No internet connection.")
-            return
-        
-        hidepopupwindow=False
-        
-        img = ImageGrab.grabclipboard()
-        time.sleep(0.05)
-        if not isinstance(img, Image.Image):
-            hidepopupwindow=True
-            return
-        buf = tempfile.SpooledTemporaryFile()
-        img.save(buf, format='PNG'); buf.seek(0)
-        time.sleep(0.05)
-        
-        latex = OCR.get_latex( SIMPLETEX_API_URL, SIMPLETEX_APP_ID, SIMPLETEX_APP_SECRET, buf.read() )
-        if latex=="":
-            logging.error("OCR returned empty string")
-            hidepopupwindow=True
-            return
-        mathml = Maple.latex_to_mathml( latex, maple_exe, raw )
-        
-        hidepopupwindow=True
-        
-        log_at_cursor(mathml, True)
-        logging.info("Pasted MathML to cursor.")
-
-    else:
+    if not "Maple" in window_text and not "Word" in window_text:
         logging.warning("Maple or word window not active, skipping paste.")
         return
+
+    while any(keyboard._pressed_events):  # type: ignore
+        time.sleep(0.01)
+        
+    if not has_internet():
+        logging.error("No internet connection.")
+        return
+    
+    hidepopupwindow=False
+    
+    img = ImageGrab.grabclipboard()
+    time.sleep(0.05)
+    if not isinstance(img, Image.Image):
+        hidepopupwindow=True
+        return
+    buf = tempfile.SpooledTemporaryFile()
+    img.save(buf, format='PNG'); buf.seek(0)
+    time.sleep(0.05)
+    
+    files = {'file': ('image.png', buf.read(), 'image/png')}
+    response = requests.post("http://127.0.0.1:8000/imagetolatex", files=files)
+    latex = response.json().get('latex', '') if response.status_code == 200 else ''
+    
+    if latex=="":
+        logging.error("OCR returned empty string")
+        hidepopupwindow=True
+        return
+    mathml = Maple.latex_to_mathml( latex, maple_exe, raw )
+    
+    hidepopupwindow=True
+    
+    if paste_at_cursor(mathml, True):
+        logging.info("Pasted MathML to cursor.")
+    else:
+        logging.info("Skipped pasting of MathML to cursor.")
 
 def main():
     global hidepopupwindow
@@ -182,7 +181,7 @@ def main():
     
     create_startup()
     
-    keyboard.add_hotkey('ctrl+alt+v', lambda: process_clipboard(maple, False))
+    #keyboard.add_hotkey('ctrl+alt+v', lambda: process_clipboard(maple, False))
     keyboard.add_hotkey('ctrl+shift+alt+v', lambda: process_clipboard(maple, True))
         
     logging.info("Running...")
