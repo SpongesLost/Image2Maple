@@ -152,7 +152,7 @@ def process_clipboard(maple_exe: str, raw: bool = False):
     time.sleep(0.05)
     
     files = {'file': ('image.png', buf.read(), 'image/png')}
-    response = requests.post("http://127.0.0.1:8000/imagetolatex", files=files)
+    response = requests.post("https://image2maple.onrender.com/imagetolatex", files=files)
     latex = response.json().get('latex', '') if response.status_code == 200 else ''
     
     if latex=="":
