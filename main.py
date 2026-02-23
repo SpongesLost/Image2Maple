@@ -18,12 +18,12 @@ SIMPLETEX_APP_ID = os.getenv("SIMPLETEX_APP_ID")
 SIMPLETEX_APP_SECRET = os.getenv("SIMPLETEX_APP_SECRET")
 
 @app.get("/")
-@limiter.limit("20/minute")
+@limiter.limit("70/minute")
 def read_root(request: Request):
     return {"Hello": "World"}
 
 @app.post("/imagetolatex")
-@limiter.limit("10/minute")
+@limiter.limit("15/minute")
 async def convert_image_to_latex(request: Request, file: UploadFile = File(...)):
     image_bytes = await file.read()
     latex_result = get_latex(image_bytes)

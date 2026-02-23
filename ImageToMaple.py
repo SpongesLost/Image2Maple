@@ -125,6 +125,14 @@ def initiate_loading_popup():
         else:
             root.withdraw()
         root.update()
+        
+def ping_server():
+    while True:
+        try:
+            response = requests.get("https://image2maple.onrender.com/")
+        except Exception as e:
+            logging.error(f"Ping server failed: {e}")
+        time.sleep(10)
 
 def process_clipboard(maple_exe: str, raw: bool = False):
     global hidepopupwindow
@@ -177,6 +185,9 @@ def main():
     maple = get_maple_executable()
     
     thread = threading.Thread(target=initiate_loading_popup, daemon=True)
+    thread.start()
+    
+    thread = threading.Thread(target=ping_server, daemon=True)
     thread.start()
     
     create_startup()
