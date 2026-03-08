@@ -1,7 +1,7 @@
-import threading
 from tendo import singleton
 me = singleton.SingleInstance()
 
+import threading
 import os
 import sys
 import time
@@ -16,6 +16,7 @@ from PIL import ImageGrab, Image
 from win32com.client import Dispatch
 from tkinter import Tk, simpledialog, messagebox, Label
 from win32gui import GetWindowText, GetForegroundWindow
+import subprocess
 
 import Config
 import Maple
@@ -50,7 +51,6 @@ def prompt_maple_path() -> Optional[str]:
     return path
 
 def get_maple_executable() -> str:
-    logging.debug("Checking for Maple executable")
     logging.debug("Attempting to load config")
     cfg = Config.load_config(CONFIG_PATH)
     path = cfg.get('maple_exe', DEFAULT_MAPLE_PATH)
@@ -81,24 +81,49 @@ def paste_at_cursor(text: str, truncate: bool) -> bool:
         return True
 
 def create_startup():
-    logging.debug("Attempting to create startup shortcut")
-    try:
+    task_name = "ImageToMapleStartup"
+    
+    if getattr(sys, "frozen", False):
+        command = f'"{sys.executable}"'
+    else:
         script_path = os.path.abspath(sys.argv[0])
-        startup_dir = os.path.join(os.environ.get('APPDATA', ''), r"Microsoft\Windows\Start Menu\Programs\Startup")
-        shortcut_path = os.path.join(startup_dir, "ImageToMaple.lnk")
-        if not os.path.exists(shortcut_path):
-            shell = Dispatch("WScript.Shell")
-            shortcut = shell.CreateShortcut(shortcut_path)
-            shortcut.TargetPath = sys.executable
-            shortcut.Arguments = f'"{script_path}"'
-            shortcut.WorkingDirectory = os.path.dirname(script_path)
-            shortcut.IconLocation = script_path
-            shortcut.Save()
-            logging.info("Startup shortcut created at %s", shortcut_path)
-        else: 
-            logging.info("Startup shortcut already exists at %s", shortcut_path)
-    except Exception:
-        logging.exception("Failed to create startup shortcut")
+        command = f'"{sys.executable}" "{script_path}"'
+        
+    result = subprocess.run(
+        ["schtasks", "/query", "/tn", task_name],
+        capture_output=True,
+        text=True,
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    )
+
+    if "ERROR" in result.stdout or "ERROR" in result.stderr:
+        logging.info("Scheduled task not found. Creating new task...")
+        subprocess.run([
+            "schtasks",
+            "/create",
+            "/tn", task_name,
+            "/tr", command,
+            "/sc", "onlogon",
+            "/delay", "0000:10",
+            "/rl", "highest",
+            "/it",
+        ], check=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        
+        ps_script = f"""
+        $task = Get-ScheduledTask -TaskName "{task_name}"
+        $task.Settings.DisallowStartIfOnBatteries = $false
+        $task.Settings.StopIfGoingOnBatteries = $false
+        Set-ScheduledTask $task
+        """
+        subprocess.run(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps_script],
+            check=True,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
+        
+        logging.info("Scheduled task created successfully.")
+    else:
+        logging.info("Scheduled task already exists. Skipping creation.")
 
 def initiate_loading_popup():
     global hidepopupwindow
@@ -129,47 +154,58 @@ def initiate_loading_popup():
 def ping_server():
     while True:
         try:
-            response = requests.get("https://image2maple.onrender.com/")
+            requests.get("https://image2maple.onrender.com/")
         except Exception as e:
             logging.error(f"Ping server failed: {e}")
-        time.sleep(10)
+        time.sleep(180)
 
-def process_clipboard(maple_exe: str, raw: bool = False):
+def image_to_maple(maple_exe: str, raw: bool = False):
+    logging.info("Shortcut pressed.")
     global hidepopupwindow
     window_text = GetWindowText(GetForegroundWindow())
     if not "Maple" in window_text and not "Word" in window_text:
         logging.warning("Maple or word window not active, skipping paste.")
         return
-
-    while any(keyboard._pressed_events):  # type: ignore
-        time.sleep(0.01)
-        
+    
     if not has_internet():
         logging.error("No internet connection.")
         return
+
+    while any(keyboard._pressed_events):  # type: ignore
+        time.sleep(0.01)
     
     hidepopupwindow=False
     
     img = ImageGrab.grabclipboard()
     time.sleep(0.05)
     if not isinstance(img, Image.Image):
+        logging.error("Clipboard does not contain an image.")
         hidepopupwindow=True
         return
     buf = tempfile.SpooledTemporaryFile()
     img.save(buf, format='PNG'); buf.seek(0)
     time.sleep(0.05)
     
+    logging.info("Clipboard condains image.")
+    logging.debug("Sending image to image2maple render backend...")
+    
     files = {'file': ('image.png', buf.read(), 'image/png')}
     response = requests.post("https://image2maple.onrender.com/imagetolatex", files=files)
     latex = response.json().get('latex', '') if response.status_code == 200 else ''
     
     if latex=="":
-        logging.error("OCR returned empty string")
+        logging.error("OCR returned empty string.")
         hidepopupwindow=True
         return
+    
+    logging.info("Image to latex successful.")
+    logging.debug("Converting latex to MathML...")
+    
     mathml = Maple.latex_to_mathml( latex, maple_exe, raw )
     
     hidepopupwindow=True
+    
+    logging.info("Success! Converted latex converted to MathML.")
     
     if paste_at_cursor(mathml, True):
         logging.info("Pasted MathML to cursor.")
@@ -193,7 +229,7 @@ def main():
     create_startup()
     
     #keyboard.add_hotkey('ctrl+alt+v', lambda: process_clipboard(maple, False))
-    keyboard.add_hotkey('ctrl+shift+alt+v', lambda: process_clipboard(maple, True))
+    keyboard.add_hotkey('ctrl+shift+alt+v', lambda: image_to_maple(maple, True))
         
     logging.info("Running...")
     keyboard.wait()
