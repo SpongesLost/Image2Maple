@@ -95,7 +95,7 @@ def create_tray_icon():
         pystray.MenuItem("Quit", quit_application)
     )
     
-    icon = pystray.Icon("SchoolFileSearch", image, "School File Search", menu)
+    icon = pystray.Icon("ImageToMaple", image, "Image To Maple", menu)
     logging.info("Tray icon successfully created")
     return icon
 
