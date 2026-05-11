@@ -13,7 +13,7 @@ def get_version() -> str:
     try:
         with open(resource_path(".VERSION")) as f:
             return f.readline()[:-1]
-    except ImportError:
+    except Exception:
         return "dev"
 
 __version__ = get_version()

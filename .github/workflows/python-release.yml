@@ -83,6 +83,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller
           pip install tendo pillow keyboard pywin32 requests pyperclip psutil
+
+      - name: Recreate VERSION file
+        run: |
+          $VERSION = "${{ needs.release.outputs.tag-name }}" -replace '^v', ''
+          Set-Content -Path ".VERSION" -Value $VERSION -NoNewline
+          Write-Host "Created .VERSION with value: $VERSION"
+          Get-Content .VERSION
       
       - name: Build executable
         run: |
