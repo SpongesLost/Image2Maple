@@ -1,5 +1,6 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
+# ImageToMaple generated version file
+_version.py
+.VERSION
 *.py[codz]
 *$py.class
 

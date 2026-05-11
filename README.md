@@ -1,8 +1,9 @@
-*Currently requires Maple 2025 to convert latex to MathML.*
+*\* Currently requires Maple 2025 to convert latex to MathML.*
+*\* May currently require being compiled to exe before functioning properly.*
 # Image2Maple
 **Image2Maple** is a python program that can be activated with ``ctrl+alt+shift+v``, it takes an image from the user's clipboard then and pastes the corresponding MathML code, this is nice because MathML when pasted is automatically interpolated as a math object in maple, and other software such as word.  
 
-**FYI:** This program creates a startup script at ``%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`` when run. There is **currently** no toggle on or off. It is deleted manually or with the ``Uninstall_ImageToMaple.exe`` or ``.py``.
+**FYI:** If enabled at startup, a scheduled task will be created for it to boot at startup. It is deleted manually or with the ``Uninstall_ImageToMaple.exe`` or ``.py``.
 ## Installation
 * The program can be 'installed' or run through the exe in the releases. You may be prompted with a window saying *Windows Protected Your PC* this is standard for unsigned exes, simply press *More Info* and *Run Anyways*, then press *Yes* to Admin Privileges.
 * Or just by downloading the source code and running the python script ``ImageToMaple.py`` with the necessary dependencies installed.
@@ -14,8 +15,10 @@ To uninstall **Image2Maple** simple run the ``Uninstall_ImageToMaple.exe`` or ``
 *Note: The **only** thing left after uninstalling should be the uninstall script itself.*
 ## Program Flow
 When you run the ``ImageToMaple.exe`` or ``.py`` it does the following:
-1. Finds Maple 2025 executable and prompts user for path if its not at the default location.
-2. Creates a startup ``ImageToMaple.lnk`` script at ``%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup``.  
+1. Checks whether a different version is installed, if so, it can uninstall it automatically.
+2. If its a new version or it has not been installed before, it guides the user through installation and settings.
+3. Finds Maple 2025 executable and prompts user for path if its not at the default location.
+4. Creates a scheduled task ``"ImageToMapleStartup "+version``.
 
 When you press ``ctrl+alt+shift+v`` it does the following:
 1. Checks whether you have Maple or Word focused.

@@ -86,8 +86,8 @@ jobs:
       
       - name: Build executable
         run: |
-          pyinstaller --noconfirm --onefile --clean --uac-admin --windowed --name ImageToMaple ImageToMaple.py
-          pyinstaller --noconfirm --onefile --clean --uac-admin --name Uninstall_ImageToMaple Uninstall_ImageToMaple.py
+          pyinstaller --noconfirm --onefile --clean --uac-admin --windowed --add-data ".VERSION;." --add-data "ImageToMaple.png;." --name ImageToMaple scripts/imagetomaple.py
+          pyinstaller --noconfirm --onefile --clean --uac-admin --windowed --add-data ".VERSION;." --add-data "ImageToMaple.png;." --name Uninstall_ImageToMaple scripts/uninstallimagetomaple.py
       
       - name: Create distribution
         run: |
